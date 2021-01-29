@@ -159,7 +159,7 @@ var Chess = function (fen) {
   var move_number = 1;
   var history = [];
   var header = {};
-  var game_type = GAME_STANDARD;
+  var game_type = GAME_960; // GAME_STANDARD;
 
   /* if the user passes in a fen string, load it, else default to
    * starting position
@@ -236,10 +236,10 @@ var Chess = function (fen) {
         /* keep track of the rook squares for 960 castling */
         if (board[square].type == ROOK && game_type == GAME_960) {
           if (castling[color] & BITS.QSIDE_CASTLE && kings[color] == EMPTY) {
-            ROOKS[color][0] = { square: square, flag: BITS.QSIDE_CASTLE };
+            rooks[color][0] = { square: square, flag: BITS.QSIDE_CASTLE };
           }
           if (castling[color] & BITS.KSIDE_CASTLE && kings[color] != EMPTY) {
-            ROOKS[color][1] = { square: square, flag: BITS.KSIDE_CASTLE };
+            rooks[color][1] = { square: square, flag: BITS.KSIDE_CASTLE };
           }
         }
         square++;
@@ -1025,12 +1025,29 @@ var Chess = function (fen) {
 
       /* if we castled, move the rook next to the king */
       if (move.flags & BITS.KSIDE_CASTLE) {
+        // var king_to = us == WHITE ? SQUARES.g1 : SQUARES.g8;
+        // board[king_to] = board[move.to];
+        // if (king_to != move.to) {
+        //   board[move.to] = null;
+        // }
+        // // move.to = king_to;
+        // kings[board[king_to].color] = king_to;
+
+
         var castling_to = move.to - 1;
         var castling_from = move.rook_sq;
         board[castling_to] = { type: ROOK, color: us };
         if (castling_from !== move.to && castling_from !== castling_to)
           board[castling_from] = null;
       } else if (move.flags & BITS.QSIDE_CASTLE) {
+        // var king_to = us == WHITE ? SQUARES.c1 : SQUARES.c8;
+        // board[king_to] = board[move.to];
+        // if (king_to != move.to) {
+        //   board[move.to] = null;
+        // }
+        // // move.to = king_to;
+        // kings[board[king_to].color] = king_to;
+
         var castling_to = move.to + 1;
         var castling_from = move.rook_sq;
         board[castling_to] = { type: ROOK, color: us };
@@ -1041,6 +1058,8 @@ var Chess = function (fen) {
       /* turn off castling */
       castling[us] = '';
     }
+
+
 
     /* turn off castling if we move a rook */
     if (castling[us]) {
@@ -1106,8 +1125,29 @@ var Chess = function (fen) {
     var them = swap_color(turn);
 
     if (move.from != move.to) {
+      // if (move.flags & (BITS.KSIDE_CASTLE | BITS.QSIDE_CASTLE)) {
+      //   var king_pos;
+      //   if (move.flags & BITS.KSIDE_CASTLE) {
+      //     king_pos = us == WHITE ? SQUARES.g1 : SQUARES.g8;
+      //   } else {
+      //     king_pos = us == WHITE ? SQUARES.c1 : SQUARES.c8;
+      //   }
+
+      //   console.log('kings[us]', kings[us]);
+      //   console.log('king_pos', king_pos);
+
+      //   console.log('board[move.to]', board[move.to]);
+      //   console.log('board[kings[us]]', board[kings[us]]);
+      //   console.log('board', board);
+      //   if (board[king_pos])
+      //     board[move.from] = board[king_pos];
+      // } else {
       board[move.from] = board[move.to];
-      board[move.from].type = move.piece;  // to undo any promotions
+      // }
+
+      if (board[move.from]) {
+        board[move.from].type = move.piece;  // to undo any promotions
+      }
       board[move.to] = null;
     }
 
@@ -1413,6 +1453,17 @@ var Chess = function (fen) {
           moves.push(move_to_san(ugly_moves[i], false));
         }
       }
+
+      if (game_type == GAME_960) {
+        for (var i = 0, len = moves.length; i < len; i++) {
+          var move = moves[i];
+
+          if (move.flags == FLAGS.KSIDE_CASTLE || move.flags == FLAGS.QSIDE_CASTLE) {
+            move.to = algebraic(move.rook_sq);
+          }
+        }
+      }
+
 
       return moves;
     },
@@ -1745,6 +1796,22 @@ var Chess = function (fen) {
         move_obj = move_from_san(move, sloppy);
       } else if (typeof move === 'object') {
         var moves = generate_moves();
+
+        if (game_type == GAME_960) {
+          for (var i = 0, len = moves.length; i < len; i++) {
+            console.log(moves[i]);
+            if (moves[i].flags == BITS.KSIDE_CASTLE || moves[i].flags == BITS.QSIDE_CASTLE) {
+              console.log('castle moves', algebraic(moves[i].from), algebraic(moves[i].to));
+              if (algebraic(moves[i].rook_sq) == move.to && move.to != algebraic(moves[i].to)
+                && move.from == algebraic(moves[i].from)) {
+                console.log('moves[i]2', moves[i], move);
+                move = { from: algebraic(moves[i].from), to: algebraic(moves[i].to) };
+                break;
+              }
+            }
+          }
+        }
+        console.log('move', move);
 
         /* convert the pretty move object to an ugly move object */
         for (var i = 0, len = moves.length; i < len; i++) {
