@@ -236,15 +236,6 @@ var Chess = function (fen, variant) {
         var color = (piece < 'a') ? WHITE : BLACK;
         put({ type: piece.toLowerCase(), color: color }, algebraic(square));
 
-        /* keep track of the rook squares for 960 castling */
-        if (board[square].type == ROOK && game_type == GAME_960) {
-          if (castling[color] & BITS.QSIDE_CASTLE && kings[color] == EMPTY) {
-            rooks[color][0] = { square: square, flag: BITS.QSIDE_CASTLE };
-          }
-          if (castling[color] & BITS.KSIDE_CASTLE && kings[color] != EMPTY) {
-            rooks[color][1] = { square: square, flag: BITS.KSIDE_CASTLE };
-          }
-        }
         square++;
       }
     }
@@ -253,6 +244,7 @@ var Chess = function (fen, variant) {
 
     rooks = { w: [], b: [] };
 
+    /* keep track of the rook squares for 960 castling */
     if (tokens[2].indexOf('K') > -1) {
       castling.w |= BITS.KSIDE_CASTLE;
       for (var sq = SQUARES.h1; sq >= SQUARES.c1; --sq) {
@@ -1763,7 +1755,7 @@ var Chess = function (fen, variant) {
           for (var i = 0, len = moves.length; i < len; i++) {
             if (moves[i].flags == BITS.KSIDE_CASTLE || moves[i].flags == BITS.QSIDE_CASTLE) {
               if (algebraic(moves[i].rook_sq) == move.to && move.from == algebraic(moves[i].from)) {
-                move = { from: algebraic(moves[i].from), to: algebraic(moves[i].to) };
+                move_obj = moves[i];
                 break;
               }
             }
@@ -1771,13 +1763,15 @@ var Chess = function (fen, variant) {
         }
 
         /* convert the pretty move object to an ugly move object */
-        for (var i = 0, len = moves.length; i < len; i++) {
-          if (move.from === algebraic(moves[i].from) &&
-            move.to === algebraic(moves[i].to) &&
-            (!('promotion' in moves[i]) ||
-              move.promotion === moves[i].promotion)) {
-            move_obj = moves[i];
-            break;
+        if (move_obj == null) {
+          for (var i = 0, len = moves.length; i < len; i++) {
+            if (move.from === algebraic(moves[i].from) &&
+              move.to === algebraic(moves[i].to) &&
+              (!('promotion' in moves[i]) ||
+                move.promotion === moves[i].promotion)) {
+              move_obj = moves[i];
+              break;
+            }
           }
         }
       }
